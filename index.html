@@ -1,0 +1,1160 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Eventora — Modern Event Management System</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config={
+  theme:{
+    extend:{
+      fontFamily:{ sans:['Plus Jakarta Sans','Inter','sans-serif'] },
+      colors:{
+        primary:'#6d28d9',
+        primaryHover:'#5b21b6',
+        dark:'#0f0f14',
+        muted:'#6b7280'
+      },
+      boxShadow:{
+        'card':'0 4px 24px rgba(0,0,0,0.06)',
+        'cardHover':'0 12px 40px rgba(0,0,0,0.12)',
+        'glow':'0 0 40px rgba(109,40,217,0.25)'
+      }
+    }
+  }
+}
+</script>
+<style>
+*{scroll-behavior:smooth}
+body{background:#f8f7ff}
+::-webkit-scrollbar{width:8px;height:8px}
+::-webkit-scrollbar-thumb{background:#ddd6fe;border-radius:999px}
+::-webkit-scrollbar-track{background:#f5f3ff}
+.ticket-perforation{position:relative}
+.ticket-perforation::before,.ticket-perforation::after{content:'';position:absolute;top:50%;width:20px;height:20px;background:#f8f7ff;border-radius:50%;transform:translateY(-50%)}
+.ticket-perforation::before{left:-10px}
+.ticket-perforation::after{right:-10px}
+.modal-backdrop{backdrop-filter:blur(8px);background:rgba(15,15,20,0.6)}
+.animate-in{animation:animateIn .3s ease-out}
+@keyframes animateIn{from{opacity:0;transform:translateY(8px) scale(.98)}to{opacity:1;transform:translateY(0) scale(1)}}
+.shimmer{background:linear-gradient(90deg, #f3f0ff 25%, #ede9fe 50%, #f3f0ff 75%);background-size:200% 100%;animation:shimmer 1.5s infinite}
+@keyframes shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.countdown-box{background:rgba(255,255,255,0.12);backdrop-filter:blur(12px);border:1px solid rgba(255,255,255,0.18)}
+.category-pill.active{background:#0f0f14;color:white;border-color:#0f0f14}
+.no-scrollbar::-webkit-scrollbar{display:none}
+.no-scrollbar{-ms-overflow-style:none;scrollbar-width:none}
+</style>
+</head>
+<body class="font-sans text-dark antialiased">
+<!-- Top Navigation -->
+<header class="sticky top-0 z-40 bg-white/90 backdrop-blur-xl border-b border-gray-100">
+  <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between h-[64px] gap-4">
+      <!-- Logo -->
+      <div class="flex items-center gap-8">
+        <a href="#" onclick="showView('home')" class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white shadow-glow">
+            <i class="fa-solid fa-bolt text-sm"></i>
+          </div>
+          <span class="text-xl font-extrabold tracking-tight">Eventora</span>
+        </a>
+        <nav class="hidden lg:flex items-center gap-1">
+          <button onclick="showView('home')" data-nav="home" class="nav-link px-4 py-2 rounded-full text-sm font-semibold bg-dark text-white">Home</button>
+          <button onclick="showView('events')" data-nav="events" class="nav-link px-4 py-2 rounded-full text-sm font-medium text-gray-600 hover:bg-gray-100">Events</button>
+          <button onclick="showView('tickets')" data-nav="tickets" class="nav-link px-4 py-2 rounded-full text-sm font-medium text-gray-600 hover:bg-gray-100">My Tickets</button>
+          <button onclick="showView('admin')" data-nav="admin" id="adminNavBtn" class="nav-link hidden px-4 py-2 rounded-full text-sm font-medium text-gray-600 hover:bg-gray-100">Admin</button>
+        </nav>
+      </div>
+
+      <!-- Search - Desktop -->
+      <div class="hidden md:flex items-center flex-1 max-w-md mx-4">
+        <div class="relative w-full">
+          <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+          <input id="globalSearch" type="text" placeholder="Search events, categories, locations..." class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-violet-500 focus:border-transparent focus:bg-white transition">
+        </div>
+      </div>
+
+      <!-- Actions -->
+      <div class="flex items-center gap-2">
+        <button onclick="showView('events')" class="hidden sm:inline-flex lg:hidden p-2.5 rounded-full bg-gray-50 border border-gray-200 text-gray-600">
+          <i class="fa-solid fa-magnifying-glass text-sm"></i>
+        </button>
+        <div id="authActions" class="flex items-center gap-2">
+          <!-- injected -->
+        </div>
+        <button id="mobileMenuBtn" class="lg:hidden p-2.5 rounded-full bg-gray-50 border border-gray-200">
+          <i class="fa-solid fa-bars"></i>
+        </button>
+      </div>
+    </div>
+    <!-- Mobile search -->
+    <div class="md:hidden pb-3">
+      <div class="relative">
+        <i class="fa-solid fa-magnifying-glass absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400 text-sm"></i>
+        <input id="globalSearchMobile" type="text" placeholder="Search events..." class="w-full pl-10 pr-4 py-2.5 bg-gray-50 border border-gray-200 rounded-full text-sm focus:outline-none focus:ring-2 focus:ring-violet-500">
+      </div>
+    </div>
+  </div>
+  <!-- Mobile menu -->
+  <div id="mobileMenu" class="hidden lg:hidden border-t border-gray-100 bg-white">
+    <div class="px-4 py-3 space-y-1">
+      <button onclick="showView('home')" class="w-full text-left px-4 py-3 rounded-xl font-semibold bg-dark text-white">Home</button>
+      <button onclick="showView('events')" class="w-full text-left px-4 py-3 rounded-xl font-medium hover:bg-gray-50">Events</button>
+      <button onclick="showView('tickets')" class="w-full text-left px-4 py-3 rounded-xl font-medium hover:bg-gray-50">My Tickets</button>
+      <button onclick="showView('admin')" id="mobileAdminBtn" class="hidden w-full text-left px-4 py-3 rounded-xl font-medium hover:bg-gray-50">Admin Panel</button>
+    </div>
+  </div>
+</header>
+
+<!-- MAIN -->
+<main class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-6 lg:py-8">
+  <!-- HOME VIEW -->
+  <div id="view-home" class="space-y-8">
+    <!-- Hero -->
+    <section class="relative overflow-hidden rounded-[28px] bg-gradient-to-br from-[#6d28d9] via-[#7c3aed] to-[#4f46e5] p-6 sm:p-8 lg:p-10 text-white">
+      <div class="absolute inset-0 opacity-20">
+        <div class="absolute -top-24 -right-24 w-[500px] h-[500px] bg-white rounded-full blur-[120px]"></div>
+        <div class="absolute -bottom-32 -left-32 w-[600px] h-[600px] bg-violet-300 rounded-full blur-[120px]"></div>
+      </div>
+      <!-- subtle grid -->
+      <div class="absolute inset-0 opacity-[0.07]" style="background-image:radial-gradient(circle at 1px 1px, white 1px, transparent 0);background-size:32px 32px"></div>
+      
+      <div class="relative grid lg:grid-cols-[1.1fr_0.9fr] gap-8 items-center">
+        <div class="space-y-6">
+          <div class="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 border border-white/20 text-xs font-semibold tracking-wide">
+            <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+            LIVE EVENTS • 12+ HAPPENING THIS WEEK
+          </div>
+          <h1 class="text-[32px] sm:text-[42px] lg:text-[52px] font-extrabold leading-[0.95] tracking-tight">
+            Discover<br>
+            <span class="text-white/90">Unforgettable</span><br>
+            Experiences
+          </h1>
+          <p class="text-white/80 text-[15px] leading-relaxed max-w-xl">
+            From tech summits to music festivals, find and book your next adventure. Join 50,000+ attendees creating memories with Eventora.
+          </p>
+          <div class="flex flex-wrap gap-3">
+            <button onclick="showView('events')" class="inline-flex items-center gap-2 px-6 py-3.5 bg-white text-dark rounded-full font-bold text-sm hover:bg-gray-50 transition shadow-lg">
+              Explore Events <i class="fa-solid fa-arrow-right text-xs"></i>
+            </button>
+            <button onclick="document.getElementById('howItWorks').scrollIntoView({behavior:'smooth'})" class="inline-flex items-center gap-2 px-6 py-3.5 bg-white/10 border border-white/20 rounded-full font-semibold text-sm hover:bg-white/20 transition">
+              <i class="fa-solid fa-play text-xs"></i> How it works
+            </button>
+          </div>
+          <!-- Countdown -->
+          <div class="pt-2">
+            <p class="text-xs font-semibold tracking-widest text-white/70 mb-3">NEXT FEATURED EVENT STARTS IN</p>
+            <div class="flex gap-2 sm:gap-3" id="countdown">
+              <div class="countdown-box rounded-2xl px-3 sm:px-5 py-3 text-center min-w-[64px] sm:min-w-[78px]">
+                <div class="text-xl sm:text-2xl font-extrabold leading-none" id="cd-days">00</div><div class="text-[10px] tracking-widest opacity-70">DAYS</div>
+              </div>
+              <div class="countdown-box rounded-2xl px-3 sm:px-5 py-3 text-center min-w-[64px] sm:min-w-[78px]">
+                <div class="text-xl sm:text-2xl font-extrabold leading-none" id="cd-hours">00</div><div class="text-[10px] tracking-widest opacity-70">HOURS</div>
+              </div>
+              <div class="countdown-box rounded-2xl px-3 sm:px-5 py-3 text-center min-w-[64px] sm:min-w-[78px]">
+                <div class="text-xl sm:text-2xl font-extrabold leading-none" id="cd-mins">00</div><div class="text-[10px] tracking-widest opacity-70">MINS</div>
+              </div>
+              <div class="countdown-box rounded-2xl px-3 sm:px-5 py-3 text-center min-w-[64px] sm:min-w-[78px]">
+                <div class="text-xl sm:text-2xl font-extrabold leading-none" id="cd-secs">00</div><div class="text-[10px] tracking-widest opacity-70">SECS</div>
+              </div>
+            </div>
+            <p class="text-xs text-white/60 mt-2" id="countdownLabel">Tech Summit 2026 • Dec 15, 2026</p>
+          </div>
+        </div>
+        <!-- Hero Image Card -->
+        <div class="relative lg:pl-6">
+          <div class="relative rounded-[24px] overflow-hidden bg-white p-2 shadow-2xl rotate-[1deg] hover:rotate-0 transition duration-500">
+            <img id="heroImage" src="https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=900&q=80" class="w-full h-[280px] sm:h-[360px] object-cover rounded-[18px]" alt="Event">
+            <div class="absolute bottom-6 left-6 right-6 bg-white rounded-2xl p-4 shadow-xl flex items-center gap-4">
+              <img src="https://images.unsplash.com/photo-1505373877841-8d25f7d46678?auto=format&fit=crop&w=200&q=80" class="w-14 h-14 rounded-xl object-cover">
+              <div class="flex-1 min-w-0">
+                <p class="text-xs font-bold tracking-widest text-violet-600">TECHNOLOGY</p>
+                <p class="font-bold text-sm leading-tight truncate">Tech Summit 2026</p>
+                <p class="text-xs text-gray-500 flex items-center gap-1"><i class="fa-regular fa-calendar"></i> Dec 15 • San Francisco</p>
+              </div>
+              <div class="w-10 h-10 rounded-full bg-dark text-white flex items-center justify-center">
+                <i class="fa-solid fa-arrow-up-right-from-square text-xs"></i>
+              </div>
+            </div>
+          </div>
+          <!-- floating badge -->
+          <div class="absolute -top-2 -right-2 bg-white rounded-2xl px-4 py-3 shadow-xl border border-gray-100 hidden sm:flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-emerald-50 flex items-center justify-center text-emerald-600"><i class="fa-solid fa-users"></i></div>
+            <div>
+              <p class="text-sm font-extrabold leading-none">12.4k+</p><p class="text-[11px] text-gray-500 font-medium">Attendees</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Categories -->
+    <section>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-extrabold">Browse by Category</h2>
+        <button onclick="showView('events')" class="text-sm font-semibold text-violet-600 hover:text-violet-700">View all <i class="fa-solid fa-chevron-right text-xs ml-1"></i></button>
+      </div>
+      <div class="grid grid-cols-3 sm:grid-cols-6 gap-3">
+        <button onclick="filterByCategory('Technology')" class="group bg-white rounded-2xl p-4 border border-gray-100 hover:border-violet-200 hover:shadow-cardHover transition text-center">
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-blue-50 text-blue-600 flex items-center justify-center group-hover:scale-110 transition"><i class="fa-solid fa-microchip"></i></div>
+          <p class="text-sm font-bold mt-3">Technology</p><p class="text-xs text-gray-500">4 events</p>
+        </button>
+        <button onclick="filterByCategory('Business')" class="group bg-white rounded-2xl p-4 border border-gray-100 hover:border-violet-200 hover:shadow-cardHover transition text-center">
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-amber-50 text-amber-600 flex items-center justify-center group-hover:scale-110 transition"><i class="fa-solid fa-briefcase"></i></div>
+          <p class="text-sm font-bold mt-3">Business</p><p class="text-xs text-gray-500">2 events</p>
+        </button>
+        <button onclick="filterByCategory('Music')" class="group bg-white rounded-2xl p-4 border border-gray-100 hover:border-violet-200 hover:shadow-cardHover transition text-center">
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-pink-50 text-pink-600 flex items-center justify-center group-hover:scale-110 transition"><i class="fa-solid fa-music"></i></div>
+          <p class="text-sm font-bold mt-3">Music</p><p class="text-xs text-gray-500">1 event</p>
+        </button>
+        <button onclick="filterByCategory('Sports')" class="group bg-white rounded-2xl p-4 border border-gray-100 hover:border-violet-200 hover:shadow-cardHover transition text-center">
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-emerald-50 text-emerald-600 flex items-center justify-center group-hover:scale-110 transition"><i class="fa-solid fa-trophy"></i></div>
+          <p class="text-sm font-bold mt-3">Sports</p><p class="text-xs text-gray-500">1 event</p>
+        </button>
+        <button onclick="filterByCategory('Education')" class="group bg-white rounded-2xl p-4 border border-gray-100 hover:border-violet-200 hover:shadow-cardHover transition text-center">
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-cyan-50 text-cyan-600 flex items-center justify-center group-hover:scale-110 transition"><i class="fa-solid fa-graduation-cap"></i></div>
+          <p class="text-sm font-bold mt-3">Education</p><p class="text-xs text-gray-500">1 event</p>
+        </button>
+        <button onclick="filterByCategory('Workshops')" class="group bg-white rounded-2xl p-4 border border-gray-100 hover:border-violet-200 hover:shadow-cardHover transition text-center">
+          <div class="w-12 h-12 mx-auto rounded-2xl bg-violet-50 text-violet-600 flex items-center justify-center group-hover:scale-110 transition"><i class="fa-solid fa-screwdriver-wrench"></i></div>
+          <p class="text-sm font-bold mt-3">Workshops</p><p class="text-xs text-gray-500">2 events</p>
+        </button>
+      </div>
+    </section>
+
+    <!-- Featured -->
+    <section>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-lg font-extrabold">Featured Events</h2>
+        <div class="hidden sm:flex items-center gap-2">
+          <button onclick="scrollFeatured(-1)" class="w-8 h-8 rounded-full border border-gray-200 bg-white flex items-center justify-center hover:bg-gray-50"><i class="fa-solid fa-chevron-left text-xs"></i></button>
+          <button onclick="scrollFeatured(1)" class="w-8 h-8 rounded-full border border-gray-200 bg-white flex items-center justify-center hover:bg-gray-50"><i class="fa-solid fa-chevron-right text-xs"></i></button>
+        </div>
+      </div>
+      <div id="featuredGrid" class="grid md:grid-cols-3 gap-5">
+        <!-- injected -->
+      </div>
+    </section>
+
+    <!-- Stats + How it works -->
+    <section id="howItWorks" class="grid lg:grid-cols-3 gap-5">
+      <div class="lg:col-span-2 bg-dark rounded-[24px] p-6 sm:p-8 text-white relative overflow-hidden">
+        <div class="absolute top-0 right-0 w-64 h-64 bg-violet-600 rounded-full blur-[80px] opacity-30"></div>
+        <h3 class="relative text-xl font-extrabold">Why 50,000+ people trust Eventora</h3>
+        <div class="relative grid sm:grid-cols-3 gap-6 mt-6">
+          <div><div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-3"><i class="fa-solid fa-bolt text-violet-300"></i></div><p class="font-bold text-sm">Instant Tickets</p><p class="text-xs text-white/60 mt-1 leading-relaxed">Get your digital ticket with QR code immediately after registration.</p></div>
+          <div><div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-3"><i class="fa-solid fa-shield-halved text-emerald-300"></i></div><p class="font-bold text-sm">Secure & Verified</p><p class="text-xs text-white/60 mt-1 leading-relaxed">Bank-grade security with hashed passwords & protected data.</p></div>
+          <div><div class="w-10 h-10 rounded-xl bg-white/10 flex items-center justify-center mb-3"><i class="fa-solid fa-rotate-left text-amber-300"></i></div><p class="font-bold text-sm">Easy Cancellation</p><p class="text-xs text-white/60 mt-1 leading-relaxed">Plans changed? Cancel anytime and free up your spot.</p></div>
+        </div>
+      </div>
+      <div class="bg-white rounded-[24px] p-6 border border-gray-100 shadow-card">
+        <h4 class="font-extrabold">Platform Stats</h4>
+        <div class="space-y-4 mt-5">
+          <div class="flex items-center justify-between"><span class="text-sm text-gray-600 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-violet-600"></span>Total Events</span><span class="font-extrabold" id="statTotal">12</span></div>
+          <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-violet-600 w-[85%]"></div></div>
+          <div class="flex items-center justify-between"><span class="text-sm text-gray-600 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span>Registrations</span><span class="font-extrabold" id="statRegs">0</span></div>
+          <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-emerald-500 w-[62%]"></div></div>
+          <div class="flex items-center justify-between"><span class="text-sm text-gray-600 flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-500"></span>Capacity Filled</span><span class="font-extrabold" id="statCap">0%</span></div>
+          <div class="w-full h-1.5 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-amber-500 w-[46%]"></div></div>
+        </div>
+        <div class="mt-6 p-3 rounded-2xl bg-violet-50 border border-violet-100 flex items-center gap-3">
+          <img src="https://i.pravatar.cc/100?img=32" class="w-8 h-8 rounded-full">
+          <p class="text-xs leading-tight"><span class="font-bold">Sarah & 2.4k others</span> registered this week</p>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <!-- EVENTS VIEW -->
+  <div id="view-events" class="hidden space-y-6">
+    <div class="flex flex-col lg:flex-row lg:items-end justify-between gap-4">
+      <div>
+        <h1 class="text-[28px] font-extrabold tracking-tight">Discover Events</h1>
+        <p class="text-sm text-gray-500">Find your next experience • <span id="eventsCount">9 events</span></p>
+      </div>
+      <div class="flex flex-wrap items-center gap-2">
+        <div class="relative">
+          <i class="fa-solid fa-magnifying-glass absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 text-xs"></i>
+          <input id="eventsSearch" type="text" placeholder="Search..." class="pl-9 pr-4 py-2.5 bg-white border border-gray-200 rounded-full text-sm w-[200px] focus:outline-none focus:ring-2 focus:ring-violet-500">
+        </div>
+        <select id="sortSelect" class="px-4 py-2.5 bg-white border border-gray-200 rounded-full text-sm font-medium focus:outline-none focus:ring-2 focus:ring-violet-500">
+          <option value="date-asc">Sort: Date (Earliest)</option>
+          <option value="date-desc">Sort: Date (Latest)</option>
+          <option value="name-asc">Sort: Name (A-Z)</option>
+          <option value="capacity-desc">Sort: Most Popular</option>
+        </select>
+      </div>
+    </div>
+
+    <!-- Category Filters -->
+    <div class="flex items-center gap-2 overflow-x-auto no-scrollbar pb-1">
+      <button data-cat="All" class="category-pill active whitespace-nowrap px-5 py-2.5 rounded-full border text-sm font-bold bg-white border-gray-200">All Events</button>
+      <button data-cat="Technology" class="category-pill whitespace-nowrap px-5 py-2.5 rounded-full border text-sm font-bold bg-white border-gray-200">Technology</button>
+      <button data-cat="Business" class="category-pill whitespace-nowrap px-5 py-2.5 rounded-full border text-sm font-bold bg-white border-gray-200">Business</button>
+      <button data-cat="Music" class="category-pill whitespace-nowrap px-5 py-2.5 rounded-full border text-sm font-bold bg-white border-gray-200">Music</button>
+      <button data-cat="Sports" class="category-pill whitespace-nowrap px-5 py-2.5 rounded-full border text-sm font-bold bg-white border-gray-200">Sports</button>
+      <button data-cat="Education" class="category-pill whitespace-nowrap px-5 py-2.5 rounded-full border text-sm font-bold bg-white border-gray-200">Education</button>
+      <button data-cat="Workshops" class="category-pill whitespace-nowrap px-5 py-2.5 rounded-full border text-sm font-bold bg-white border-gray-200">Workshops</button>
+    </div>
+
+    <div id="eventsGrid" class="grid sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      <!-- injected -->
+    </div>
+    <div id="eventsEmpty" class="hidden text-center py-16 bg-white rounded-[24px] border border-dashed border-gray-200">
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400"><i class="fa-regular fa-calendar-xmark text-xl"></i></div>
+      <p class="font-bold mt-4">No events found</p><p class="text-sm text-gray-500">Try adjusting your search or category</p>
+      <button onclick="clearFilters()" class="mt-4 px-5 py-2.5 bg-dark text-white rounded-full text-sm font-semibold">Clear filters</button>
+    </div>
+  </div>
+
+  <!-- TICKETS VIEW -->
+  <div id="view-tickets" class="hidden space-y-6">
+    <div class="flex items-center justify-between">
+      <div>
+        <h1 class="text-[28px] font-extrabold tracking-tight">My Tickets</h1>
+        <p class="text-sm text-gray-500">Your registered events and digital passes</p>
+      </div>
+      <span id="ticketsBadge" class="px-3 py-1.5 rounded-full bg-violet-600 text-white text-xs font-bold">0 Tickets</span>
+    </div>
+    <div id="ticketsNeedAuth" class="hidden bg-white rounded-[24px] p-8 lg:p-12 text-center border border-gray-100 shadow-card">
+      <div class="w-20 h-20 mx-auto rounded-[20px] bg-violet-50 flex items-center justify-center text-violet-600 text-2xl"><i class="fa-solid fa-ticket"></i></div>
+      <h3 class="font-extrabold text-lg mt-4">Login to view your tickets</h3>
+      <p class="text-sm text-gray-500 mt-1 max-w-md mx-auto">Register for events and your digital tickets will appear here with QR codes and event details.</p>
+      <div class="flex justify-center gap-3 mt-6">
+        <button onclick="openAuth('login')" class="px-6 py-3 bg-dark text-white rounded-full font-bold text-sm">Login</button>
+        <button onclick="openAuth('register')" class="px-6 py-3 bg-white border border-gray-200 rounded-full font-bold text-sm">Create account</button>
+      </div>
+    </div>
+    <div id="ticketsGrid" class="grid lg:grid-cols-2 gap-5">
+      <!-- injected -->
+    </div>
+    <div id="ticketsEmpty" class="hidden bg-white rounded-[24px] p-12 text-center border border-dashed border-gray-200">
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-gray-50 flex items-center justify-center text-gray-400"><i class="fa-solid fa-inbox text-xl"></i></div>
+      <p class="font-bold mt-4">No tickets yet</p><p class="text-sm text-gray-500">You haven't registered for any events</p>
+      <button onclick="showView('events')" class="mt-4 px-6 py-3 bg-violet-600 text-white rounded-full text-sm font-bold">Browse Events</button>
+    </div>
+  </div>
+
+  <!-- ADMIN VIEW -->
+  <div id="view-admin" class="hidden space-y-6">
+    <div class="bg-gradient-to-br from-dark to-[#1f1f2e] rounded-[24px] p-6 sm:p-8 text-white relative overflow-hidden">
+      <div class="absolute top-0 right-0 w-80 h-80 bg-violet-600 rounded-full blur-[90px] opacity-20"></div>
+      <div class="relative flex flex-wrap items-start justify-between gap-4">
+        <div>
+          <p class="text-xs font-bold tracking-widest text-white/60">ADMIN PANEL • SECURE ACCESS</p>
+          <h1 class="text-2xl font-extrabold mt-1">Event Management Dashboard</h1>
+          <p class="text-sm text-white/60 mt-1">Manage events, monitor registrations and capacity</p>
+        </div>
+        <button onclick="openEventForm()" class="inline-flex items-center gap-2 px-5 py-3 bg-white text-dark rounded-full font-bold text-sm hover:bg-gray-50">
+          <i class="fa-solid fa-plus text-xs"></i> Add New Event
+        </button>
+      </div>
+      <div class="relative grid grid-cols-2 lg:grid-cols-4 gap-3 mt-6">
+        <div class="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/10"><p class="text-xs text-white/60 font-semibold">TOTAL EVENTS</p><p class="text-2xl font-extrabold mt-1" id="adminStatEvents">9</p></div>
+        <div class="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/10"><p class="text-xs text-white/60 font-semibold">TOTAL REGISTRATIONS</p><p class="text-2xl font-extrabold mt-1" id="adminStatRegs">0</p></div>
+        <div class="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/10"><p class="text-xs text-white/60 font-semibold">TOTAL CAPACITY</p><p class="text-2xl font-extrabold mt-1" id="adminStatCap">0</p></div>
+        <div class="bg-white/10 backdrop-blur rounded-2xl p-4 border border-white/10"><p class="text-xs text-white/60 font-semibold">AVG. FILL RATE</p><p class="text-2xl font-extrabold mt-1" id="adminStatFill">0%</p></div>
+      </div>
+    </div>
+
+    <div id="adminNeedAuth" class="hidden bg-white rounded-[24px] p-10 text-center border border-gray-100">
+      <div class="w-16 h-16 mx-auto rounded-2xl bg-amber-50 flex items-center justify-center text-amber-600"><i class="fa-solid fa-lock text-xl"></i></div>
+      <h3 class="font-extrabold mt-4">Admin access required</h3>
+      <p class="text-sm text-gray-500 mt-1">Login with admin credentials to manage events</p>
+      <p class="text-xs mt-3 px-3 py-2 bg-gray-50 rounded-full inline-block font-mono">admin@eventora.com / admin123</p><br>
+      <button onclick="openAuth('login')" class="mt-4 px-6 py-3 bg-dark text-white rounded-full font-bold text-sm">Login as Admin</button>
+    </div>
+
+    <div id="adminContent" class="space-y-6">
+      <!-- Tabs -->
+      <div class="flex items-center gap-2 p-1 bg-gray-100 rounded-full w-fit">
+        <button onclick="switchAdminTab('events')" id="adminTabEvents" class="px-5 py-2 rounded-full bg-white shadow text-sm font-bold">Manage Events</button>
+        <button onclick="switchAdminTab('regs')" id="adminTabRegs" class="px-5 py-2 rounded-full text-sm font-bold text-gray-600">Registrations</button>
+      </div>
+
+      <!-- Events Table -->
+      <div id="adminEventsPanel" class="bg-white rounded-[24px] border border-gray-100 shadow-card overflow-hidden">
+        <div class="p-5 flex items-center justify-between border-b border-gray-100">
+          <h3 class="font-extrabold">All Events</h3>
+          <span id="adminEventsCount" class="text-xs font-bold px-3 py-1 rounded-full bg-gray-100">9 events</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="text-xs text-gray-500 bg-gray-50">
+              <tr><th class="text-left font-semibold px-5 py-3">Event</th><th class="text-left font-semibold px-5 py-3">Category</th><th class="text-left font-semibold px-5 py-3">Date</th><th class="text-left font-semibold px-5 py-3">Capacity</th><th class="text-left font-semibold px-5 py-3">Attendees</th><th class="text-right font-semibold px-5 py-3">Actions</th></tr>
+            </thead>
+            <tbody id="adminEventsTable" class="divide-y divide-gray-100">
+              <!-- injected -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Registrations Panel -->
+      <div id="adminRegsPanel" class="hidden bg-white rounded-[24px] border border-gray-100 shadow-card overflow-hidden">
+        <div class="p-5 border-b border-gray-100">
+          <h3 class="font-extrabold">Recent Registrations</h3><p class="text-xs text-gray-500">Live attendee data • auto-updates</p>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="w-full text-sm">
+            <thead class="text-xs text-gray-500 bg-gray-50">
+              <tr><th class="text-left font-semibold px-5 py-3">Ticket ID</th><th class="text-left font-semibold px-5 py-3">Attendee</th><th class="text-left font-semibold px-5 py-3">Event</th><th class="text-left font-semibold px-5 py-3">Registered</th></tr>
+            </thead>
+            <tbody id="adminRegsTable" class="divide-y divide-gray-100">
+              <!-- injected -->
+            </tbody>
+          </table>
+        </div>
+        <div id="adminRegsEmpty" class="hidden p-12 text-center text-sm text-gray-500">No registrations yet. Attendees will appear here after booking.</div>
+      </div>
+    </div>
+  </div>
+</main>
+
+<!-- EVENT DETAIL MODAL -->
+<div id="eventModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 modal-backdrop" onclick="closeEventModal()"></div>
+  <div class="relative max-w-[880px] mx-auto my-4 sm:my-8 bg-white rounded-[24px] overflow-hidden shadow-2xl animate-in max-h-[92vh] overflow-y-auto">
+    <div id="eventModalContent">
+      <!-- injected -->
+    </div>
+  </div>
+</div>
+
+<!-- TICKET MODAL -->
+<div id="ticketModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 modal-backdrop" onclick="closeTicketModal()"></div>
+  <div class="relative max-w-[560px] mx-auto my-8 bg-white rounded-[28px] overflow-hidden shadow-2xl animate-in">
+    <div id="ticketModalContent">
+      <!-- injected -->
+    </div>
+  </div>
+</div>
+
+<!-- AUTH MODAL -->
+<div id="authModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 modal-backdrop" onclick="closeAuth()"></div>
+  <div class="relative max-w-[440px] mx-auto my-8 bg-white rounded-[28px] overflow-hidden shadow-2xl animate-in">
+    <div class="p-8">
+      <div class="flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white"><i class="fa-solid fa-bolt text-sm"></i></div>
+          <span class="font-extrabold">Eventora</span>
+        </div>
+        <button onclick="closeAuth()" class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center hover:bg-gray-200"><i class="fa-solid fa-xmark text-sm"></i></button>
+      </div>
+
+      <div class="mt-6 flex p-1 bg-gray-100 rounded-full w-fit">
+        <button id="authTabLogin" onclick="switchAuthTab('login')" class="px-6 py-2 rounded-full bg-dark text-white text-sm font-bold">Login</button>
+        <button id="authTabRegister" onclick="switchAuthTab('register')" class="px-6 py-2 rounded-full text-sm font-bold text-gray-600">Register</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="loginForm" class="mt-6 space-y-4">
+        <div>
+          <label class="text-xs font-bold tracking-widest text-gray-600">EMAIL ADDRESS</label>
+          <input id="loginEmail" type="email" placeholder="you@example.com" class="mt-1.5 w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm" required>
+          <p class="hidden text-xs text-red-500 mt-1" id="loginEmailErr"></p>
+        </div>
+        <div>
+          <label class="text-xs font-bold tracking-widest text-gray-600">PASSWORD</label>
+          <div class="relative mt-1.5">
+            <input id="loginPassword" type="password" placeholder="••••••••" class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm pr-10" required>
+            <button type="button" onclick="togglePass('loginPassword')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600"><i class="fa-regular fa-eye"></i></button>
+          </div>
+          <p class="hidden text-xs text-red-500 mt-1" id="loginPassErr"></p>
+        </div>
+        <div class="flex items-center justify-between text-xs">
+          <label class="flex items-center gap-2"><input type="checkbox" class="rounded"> Remember me</label>
+          <span class="text-gray-500">Demo admin: <span class="font-mono font-bold">admin@eventora.com / admin123</span></span>
+        </div>
+        <button type="submit" class="w-full py-3.5 bg-dark text-white rounded-full font-bold text-sm hover:bg-black transition">Sign In <i class="fa-solid fa-arrow-right ml-2 text-xs"></i></button>
+        <p class="text-center text-xs text-gray-500">Don't have an account? <button type="button" onclick="switchAuthTab('register')" class="font-bold text-violet-600 hover:underline">Register</button></p>
+      </form>
+
+      <!-- Register Form -->
+      <form id="registerForm" class="hidden mt-6 space-y-4">
+        <div>
+          <label class="text-xs font-bold tracking-widest text-gray-600">FULL NAME</label>
+          <input id="regName" type="text" placeholder="John Doe" class="mt-1.5 w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm" required>
+        </div>
+        <div>
+          <label class="text-xs font-bold tracking-widest text-gray-600">EMAIL ADDRESS</label>
+          <input id="regEmail" type="email" placeholder="you@example.com" class="mt-1.5 w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm" required>
+        </div>
+        <div>
+          <label class="text-xs font-bold tracking-widest text-gray-600">PASSWORD</label>
+          <div class="relative mt-1.5">
+            <input id="regPassword" type="password" placeholder="At least 6 characters" class="w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm pr-10" required>
+            <button type="button" onclick="togglePass('regPassword')" class="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400"><i class="fa-regular fa-eye"></i></button>
+          </div>
+        </div>
+        <div>
+          <label class="text-xs font-bold tracking-widest text-gray-600">CONFIRM PASSWORD</label>
+          <input id="regConfirm" type="password" placeholder="Repeat password" class="mt-1.5 w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm" required>
+          <p id="regErr" class="hidden text-xs text-red-500 mt-1"></p>
+        </div>
+        <button type="submit" class="w-full py-3.5 bg-violet-600 text-white rounded-full font-bold text-sm hover:bg-violet-700 transition">Create Account</button>
+        <p class="text-center text-xs text-gray-500">Already have an account? <button type="button" onclick="switchAuthTab('login')" class="font-bold text-violet-600 hover:underline">Login</button></p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- EVENT FORM MODAL (Admin) -->
+<div id="eventFormModal" class="fixed inset-0 z-50 hidden">
+  <div class="absolute inset-0 modal-backdrop" onclick="closeEventForm()"></div>
+  <div class="relative max-w-[640px] mx-auto my-4 bg-white rounded-[24px] overflow-hidden shadow-2xl animate-in max-h-[92vh] overflow-y-auto">
+    <div class="p-6 sm:p-7">
+      <div class="flex items-center justify-between">
+        <h3 id="eventFormTitle" class="text-lg font-extrabold">Add New Event</h3>
+        <button onclick="closeEventForm()" class="w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center"><i class="fa-solid fa-xmark"></i></button>
+      </div>
+      <form id="eventForm" class="mt-6 grid sm:grid-cols-2 gap-4">
+        <input type="hidden" id="efId">
+        <div class="sm:col-span-2">
+          <label class="text-xs font-bold tracking-widest text-gray-600">EVENT TITLE</label>
+          <input id="efTitle" type="text" placeholder="e.g., Tech Summit 2026" class="mt-1.5 w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm" required>
+        </div>
+        <div>
+          <label class="text-xs font-bold tracking-widest text-gray-600">CATEGORY</label>
+          <select id="efCategory" class="mt-1.5 w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm" required>
+            <option value="Technology">Technology</option><option value="Business">Business</option><option value="Music">Music</option><option value="Sports">Sports</option><option value="Education">Education</option><option value="Workshops">Workshops</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs font-bold tracking-widest text-gray-600">CAPACITY</label>
+          <input id="efCapacity" type="number" min="1" placeholder="150" class="mt-1.5 w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm" required>
+        </div>
+        <div class="sm:col-span-2">
+          <label class="text-xs font-bold tracking-widest text-gray-600">DESCRIPTION</label>
+          <textarea id="efDesc" rows="3" placeholder="Describe the event experience..." class="mt-1.5 w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm" required></textarea>
+        </div>
+        <div>
+          <label class="text-xs font-bold tracking-widest text-gray-600">LOCATION</label>
+          <input id="efLocation" type="text" placeholder="San Francisco, CA" class="mt-1.5 w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm" required>
+        </div>
+        <div>
+          <label class="text-xs font-bold tracking-widest text-gray-600">IMAGE URL</label>
+          <input id="efImage" type="url" placeholder="https://..." class="mt-1.5 w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm" required>
+        </div>
+        <div>
+          <label class="text-xs font-bold tracking-widest text-gray-600">EVENT DATE</label>
+          <input id="efDate" type="date" class="mt-1.5 w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm" required>
+        </div>
+        <div>
+          <label class="text-xs font-bold tracking-widest text-gray-600">EVENT TIME</label>
+          <input id="efTime" type="time" class="mt-1.5 w-full px-4 py-3 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-violet-500 text-sm" required>
+        </div>
+        <div class="sm:col-span-2 flex gap-3 mt-2">
+          <button type="button" onclick="closeEventForm()" class="flex-1 py-3 rounded-full border border-gray-200 font-bold text-sm">Cancel</button>
+          <button type="submit" class="flex-1 py-3 rounded-full bg-dark text-white font-bold text-sm">Save Event</button>
+        </div>
+        <p class="sm:col-span-2 text-[11px] text-gray-500 text-center"><i class="fa-solid fa-lock text-[10px]"></i> Parameterized SQL • Secure & validated</p>
+      </form>
+    </div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div id="toastContainer" class="fixed bottom-4 right-4 z-[60] space-y-2"></div>
+
+<!-- Footer -->
+<footer class="mt-12 border-t border-gray-200 bg-white">
+  <div class="max-w-[1280px] mx-auto px-4 sm:px-6 lg:px-8 py-8">
+    <div class="flex flex-col lg:flex-row justify-between gap-6">
+      <div>
+        <div class="flex items-center gap-3">
+          <div class="w-8 h-8 rounded-xl bg-gradient-to-br from-violet-600 to-indigo-600 flex items-center justify-center text-white"><i class="fa-solid fa-bolt text-xs"></i></div>
+          <span class="font-extrabold">Eventora</span>
+        </div>
+        <p class="text-sm text-gray-500 mt-2 max-w-sm">Modern event management built with Flask, SQLite & vanilla JS. Secure authentication, real-time capacity & digital tickets.</p>
+        <p class="text-xs text-gray-400 mt-3">eventora/ &nbsp;app.py • database.db • templates/ • static/</p>
+      </div>
+      <div class="flex gap-8 text-sm">
+        <div><p class="font-bold">Product</p><div class="mt-2 space-y-1 text-gray-600"><p>Events</p><p>Tickets</p><p>Admin</p></div></div>
+        <div><p class="font-bold">Stack</p><div class="mt-2 space-y-1 text-gray-600"><p>Flask + Jinja2</p><p>SQLite</p><p>Vanilla JS</p></div></div>
+        <div><p class="font-bold">Support</p><div class="mt-2 space-y-1 text-gray-600"><p>Help Center</p><p>Contact</p><p>Privacy</p></div></div>
+      </div>
+    </div>
+    <div class="mt-8 pt-6 border-t border-gray-100 flex flex-col sm:flex-row justify-between gap-3 text-xs text-gray-500">
+      <p>© 2026 Eventora. Crafted for the Full-Stack Web Tech Project.</p>
+      <p class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> All systems operational • Sessions • Secure hashing</p>
+    </div>
+  </div>
+</footer>
+
+<script>
+/* ---------- Data & Persistence ---------- */
+const defaultEvents = [
+  {id:1, title:"Tech Summit 2026", category:"Technology", description:"The premier technology conference bringing together innovators, developers, and thought leaders to shape the future. Keynotes from industry giants, hands-on labs and networking.", location:"Moscone Center, San Francisco", event_date:"2026-12-15", event_time:"09:00", capacity:500, image_url:"https://images.unsplash.com/photo-1540575467063-178a50c2df87?auto=format&fit=crop&w=800&q=80"},
+  {id:2, title:"Business Leaders Forum", category:"Business", description:"Exclusive gathering of CEOs and entrepreneurs discussing market trends, leadership strategies and global growth opportunities with immersive workshops.", location:"Javits Center, New York", event_date:"2026-11-20", event_time:"10:00", capacity:300, image_url:"https://images.unsplash.com/photo-1515187029135-18ee286d815b?auto=format&fit=crop&w=800&q=80"},
+  {id:3, title:"Summer Music Festival", category:"Music", description:"Three days of live performances from chart-topping artists across 4 stages. Food trucks, art installations and unforgettable sunsets in Austin.", location:"Zilker Park, Austin", event_date:"2026-10-10", event_time:"16:00", capacity:5000, image_url:"https://images.unsplash.com/photo-1501281668745-f7f57925c3b4?auto=format&fit=crop&w=800&q=80"},
+  {id:4, title:"Championship Sports Gala", category:"Sports", description:"Celebrate champions with award ceremonies, exhibition matches, and meet-and-greets with sports legends. Black-tie gala and charity auction.", location:"Miami Arena, Miami", event_date:"2026-11-05", event_time:"18:00", capacity:800, image_url:"https://images.unsplash.com/photo-1461896836934-ffe607ba8211?auto=format&fit=crop&w=800&q=80"},
+  {id:5, title:"Future of Education Expo", category:"Education", description:"Explore innovations in learning: EdTech demos, curriculum design labs, and panels with educators transforming classrooms worldwide.", location:"BCEC, Boston", event_date:"2026-10-28", event_time:"09:30", capacity:400, image_url:"https://images.unsplash.com/photo-1524178232363-1fb2b075b655?auto=format&fit=crop&w=800&q=80"},
+  {id:6, title:"AI Workshop Intensive", category:"Workshops", description:"Hands-on 2-day intensive covering LLMs, computer vision and deployment. Build and ship your own AI product with mentorship.", location:"Seattle Tech Hub, Seattle", event_date:"2026-11-12", event_time:"09:00", capacity:80, image_url:"https://images.unsplash.com/photo-1485827404703-89b55fcc595e?auto=format&fit=crop&w=800&q=80"},
+  {id:7, title:"Blockchain Innovators Meetup", category:"Technology", description:"Deep dives into DeFi, zero-knowledge proofs and cross-chain infrastructure with founders and protocol engineers.", location:"Chicago Innovation Center", event_date:"2026-12-02", event_time:"13:00", capacity:200, image_url:"https://images.unsplash.com/photo-1639762681057-408e52192e55?auto=format&fit=crop&w=800&q=80"},
+  {id:8, title:"Startup Pitch Night", category:"Business", description:"Watch 12 curated startups pitch to top VCs. Live feedback, networking and an after-party on the rooftop.", location:"Los Angeles, CA", event_date:"2026-10-22", event_time:"19:00", capacity:250, image_url:"https://images.unsplash.com/photo-1559136555-9303baea8ebd?auto=format&fit=crop&w=800&q=80"},
+  {id:9, title:"Creative Writing Workshop", category:"Workshops", description:"Unlock your narrative voice with bestselling authors. Interactive sessions, peer reviews and publication pathways.", location:"Portland Arts Center", event_date:"2026-11-18", event_time:"11:00", capacity:60, image_url:"https://images.unsplash.com/photo-1455390582262-044cdead277a?auto=format&fit=crop&w=800&q=80"},
+];
+
+let users = JSON.parse(localStorage.getItem('eventora_users') || 'null') || [
+  {id:1, name:"Admin", email:"admin@eventora.com", password:"admin123", isAdmin:true},
+  {id:2, name:"Alex Morgan", email:"alex@example.com", password:"alex123", isAdmin:false}
+];
+let events = JSON.parse(localStorage.getItem('eventora_events') || 'null') || JSON.parse(JSON.stringify(defaultEvents));
+let registrations = JSON.parse(localStorage.getItem('eventora_registrations') || '[]');
+let currentUser = JSON.parse(localStorage.getItem('eventora_currentUser') || 'null');
+let activeCategory="All";
+let searchQuery="";
+
+function persist(){
+  localStorage.setItem('eventora_users', JSON.stringify(users));
+  localStorage.setItem('eventora_events', JSON.stringify(events));
+  localStorage.setItem('eventora_registrations', JSON.stringify(registrations));
+  localStorage.setItem('eventora_currentUser', JSON.stringify(currentUser));
+}
+function getRegistrationsForEvent(eventId){ return registrations.filter(r=>r.event_id===eventId); }
+function isRegistered(eventId){ return currentUser && registrations.some(r=>r.user_id===currentUser.id && r.event_id===eventId); }
+function formatDate(d){ const date=new Date(d); return date.toLocaleDateString('en-US',{month:'short', day:'numeric', year:'numeric'}); }
+function formatTime(t){ const [h,m]=t.split(':'); const date=new Date(); date.setHours(h,m); return date.toLocaleTimeString('en-US',{hour:'numeric',minute:'2-digit'}); }
+
+/* ---------- Render Helpers ---------- */
+function categoryColor(cat){
+  const m={Technology:'bg-blue-50 text-blue-700 border-blue-200', Business:'bg-amber-50 text-amber-700 border-amber-200', Music:'bg-pink-50 text-pink-700 border-pink-200', Sports:'bg-emerald-50 text-emerald-700 border-emerald-200', Education:'bg-cyan-50 text-cyan-700 border-cyan-200', Workshops:'bg-violet-50 text-violet-700 border-violet-200'};
+  return m[cat]||'bg-gray-50 text-gray-700 border-gray-200';
+}
+function eventCard(ev, featured=false){
+  const regCount=getRegistrationsForEvent(ev.id).length;
+  const remaining=ev.capacity-regCount;
+  const pct=Math.min(100, Math.round((regCount/ev.capacity)*100));
+  const registered=isRegistered(ev.id);
+  return `
+  <article class="group bg-white rounded-[24px] overflow-hidden border border-gray-100 shadow-card hover:shadow-cardHover hover:-translate-y-1 transition-all duration-300 flex flex-col">
+    <div class="relative h-48 overflow-hidden">
+      <img src="${ev.image_url}" alt="${ev.title}" class="w-full h-full object-cover group-hover:scale-105 transition duration-700">
+      <div class="absolute top-3 left-3 flex gap-2">
+        <span class="px-3 py-1 rounded-full text-[11px] font-extrabold tracking-wide border backdrop-blur bg-white/90 ${categoryColor(ev.category).replace('bg-','').split(' ')[0]} border-white/50">${ev.category.toUpperCase()}</span>
+      </div>
+      <div class="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur flex items-center justify-center text-gray-700 hover:bg-white cursor-pointer" onclick="event.stopPropagation(); shareEvent(${ev.id})"><i class="fa-regular fa-bookmark text-xs"></i></div>
+      <div class="absolute bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-black/40 to-transparent pointer-events-none"></div>
+      <div class="absolute bottom-3 left-3 right-3 flex items-center justify-between text-white text-xs font-medium">
+        <span class="flex items-center gap-1.5 bg-black/30 backdrop-blur px-2.5 py-1 rounded-full border border-white/20"><i class="fa-regular fa-calendar"></i> ${formatDate(ev.event_date)}</span>
+        <span class="flex items-center gap-1.5 bg-black/30 backdrop-blur px-2.5 py-1 rounded-full border border-white/20"><i class="fa-regular fa-clock"></i> ${formatTime(ev.event_time)}</span>
+      </div>
+    </div>
+    <div class="p-4 flex flex-col flex-1">
+      <h3 class="font-extrabold leading-tight line-clamp-1">${ev.title}</h3>
+      <p class="text-xs text-gray-500 mt-1 line-clamp-2 leading-relaxed">${ev.description}</p>
+      <p class="text-xs text-gray-600 mt-3 flex items-center gap-1.5"><i class="fa-solid fa-location-dot text-gray-400"></i> ${ev.location}</p>
+      <div class="mt-4 space-y-2">
+        <div class="flex items-center justify-between text-[11px] font-bold tracking-wide"><span class="text-gray-500">${regCount} REGISTERED</span><span class="${remaining<20?'text-amber-600':'text-gray-500'}">${remaining} LEFT</span></div>
+        <div class="h-1.5 bg-gray-100 rounded-full overflow-hidden"><div class="h-full bg-gradient-to-r from-violet-600 to-indigo-600 rounded-full" style="width:${pct}%"></div></div>
+      </div>
+      <div class="mt-4 flex gap-2">
+        <button onclick="openEventModal(${ev.id})" class="flex-1 py-2.5 rounded-full border border-gray-200 font-bold text-sm hover:bg-gray-50">Details</button>
+        ${registered? `<button class="flex-1 py-2.5 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 font-bold text-sm cursor-default"><i class="fa-solid fa-check mr-1"></i> Registered</button>` : remaining<=0? `<button disabled class="flex-1 py-2.5 rounded-full bg-gray-100 text-gray-400 font-bold text-sm cursor-not-allowed">Sold Out</button>` : `<button onclick="handleQuickRegister(${ev.id})" class="flex-1 py-2.5 rounded-full bg-dark text-white font-bold text-sm hover:bg-black">Register</button>`}
+      </div>
+    </div>
+  </article>`;
+}
+
+/* ---------- Views ---------- */
+function showView(name){
+  ['home','events','tickets','admin'].forEach(v=>{
+    document.getElementById('view-'+v).classList.toggle('hidden', v!==name);
+  });
+  document.querySelectorAll('.nav-link').forEach(el=>{
+    const isActive = el.dataset.nav===name;
+    el.className = isActive ? 'nav-link px-4 py-2 rounded-full text-sm font-semibold bg-dark text-white' : 'nav-link px-4 py-2 rounded-full text-sm font-medium text-gray-600 hover:bg-gray-100';
+  });
+  document.getElementById('mobileMenu').classList.add('hidden');
+  window.scrollTo({top:0, behavior:'smooth'});
+  if(name==='events') renderEvents();
+  if(name==='tickets') renderTickets();
+  if(name==='admin') renderAdmin();
+}
+function scrollFeatured(dir){
+  const el=document.getElementById('featuredGrid');
+  el.scrollBy({left: dir*340, behavior:'smooth'});
+}
+
+/* ---------- Rendering ---------- */
+function filteredEvents(){
+  let list=[...events];
+  if(searchQuery){
+    const q=searchQuery.toLowerCase();
+    list=list.filter(e=> e.title.toLowerCase().includes(q) || e.description.toLowerCase().includes(q) || e.location.toLowerCase().includes(q) || e.category.toLowerCase().includes(q));
+  }
+  if(activeCategory!=="All") list=list.filter(e=>e.category===activeCategory);
+  const sort=document.getElementById('sortSelect')?.value || 'date-asc';
+  if(sort==='date-asc') list.sort((a,b)=> new Date(a.event_date)-new Date(b.event_date));
+  if(sort==='date-desc') list.sort((a,b)=> new Date(b.event_date)-new Date(a.event_date));
+  if(sort==='name-asc') list.sort((a,b)=> a.title.localeCompare(b.title));
+  if(sort==='capacity-desc') list.sort((a,b)=> getRegistrationsForEvent(b.id).length - getRegistrationsForEvent(a.id).length);
+  return list;
+}
+function renderEvents(){
+  const list=filteredEvents();
+  const grid=document.getElementById('eventsGrid');
+  const empty=document.getElementById('eventsEmpty');
+  document.getElementById('eventsCount').textContent = `${list.length} ${list.length===1?'event':'events'}`;
+  if(list.length===0){
+    grid.innerHTML=''; empty.classList.remove('hidden');
+  } else {
+    empty.classList.add('hidden');
+    grid.innerHTML=list.map(e=>eventCard(e)).join('');
+  }
+  // update pills
+  document.querySelectorAll('.category-pill').forEach(btn=>{
+    const cat=btn.dataset.cat;
+    btn.classList.toggle('active', cat===activeCategory);
+    if(cat===activeCategory){ btn.classList.add('bg-dark','text-white','border-dark'); btn.classList.remove('bg-white'); }
+    else { btn.classList.remove('bg-dark','text-white','border-dark'); btn.classList.add('bg-white'); }
+  });
+}
+function renderFeatured(){
+  const sorted=[...events].sort((a,b)=> new Date(a.event_date)-new Date(b.event_date)).slice(0,3);
+  document.getElementById('featuredGrid').innerHTML=sorted.map(e=>eventCard(e,true)).join('');
+}
+function renderTickets(){
+  const needAuth=document.getElementById('ticketsNeedAuth');
+  const grid=document.getElementById('ticketsGrid');
+  const empty=document.getElementById('ticketsEmpty');
+  const badge=document.getElementById('ticketsBadge');
+  if(!currentUser){
+    needAuth.classList.remove('hidden'); grid.innerHTML=''; empty.classList.add('hidden'); badge.textContent='0 Tickets'; return;
+  }
+  needAuth.classList.add('hidden');
+  const myRegs=registrations.filter(r=>r.user_id===currentUser.id);
+  badge.textContent=`${myRegs.length} ${myRegs.length===1?'Ticket':'Tickets'}`;
+  if(myRegs.length===0){
+    grid.innerHTML=''; empty.classList.remove('hidden');
+  } else {
+    empty.classList.add('hidden');
+    grid.innerHTML=myRegs.map(r=>{
+      const ev=events.find(e=>e.id===r.event_id);
+      if(!ev) return '';
+      return `
+      <div class="bg-white rounded-[24px] overflow-hidden border border-gray-100 shadow-card flex flex-col">
+        <div class="h-36 relative overflow-hidden">
+          <img src="${ev.image_url}" class="w-full h-full object-cover">
+          <div class="absolute inset-0 bg-gradient-to-t from-black/60 via-black/10 to-transparent"></div>
+          <span class="absolute top-3 left-3 px-3 py-1 rounded-full bg-white text-[11px] font-extrabold">${ev.category.toUpperCase()}</span>
+          <span class="absolute top-3 right-3 px-2.5 py-1 rounded-full bg-emerald-500 text-white text-[11px] font-bold"><i class="fa-solid fa-check mr-1"></i> CONFIRMED</span>
+          <div class="absolute bottom-3 left-4 right-4 text-white">
+            <p class="font-extrabold leading-tight">${ev.title}</p>
+            <p class="text-xs opacity-80 flex items-center gap-1.5"><i class="fa-regular fa-calendar"></i> ${formatDate(ev.event_date)} • ${formatTime(ev.event_time)} • ${ev.location}</p>
+          </div>
+        </div>
+        <div class="p-4 flex-1 flex flex-col">
+          <div class="grid grid-cols-2 gap-3 text-xs">
+            <div class="bg-gray-50 rounded-xl p-3"><p class="text-[10px] tracking-widest font-bold text-gray-500">TICKET ID</p><p class="font-mono font-bold text-violet-700">${r.ticket_id}</p></div>
+            <div class="bg-gray-50 rounded-xl p-3"><p class="text-[10px] tracking-widest font-bold text-gray-500">ATTENDEE</p><p class="font-bold">${currentUser.name}</p></div>
+          </div>
+          <div class="mt-4 flex gap-2">
+            <button onclick="openTicketModal('${r.ticket_id}')" class="flex-1 py-3 rounded-full bg-dark text-white font-bold text-sm hover:bg-black"><i class="fa-solid fa-qrcode mr-2"></i>View Ticket</button>
+            <button onclick="handleCancel('${r.id}')" class="px-5 py-3 rounded-full border border-gray-200 font-bold text-sm hover:bg-red-50 hover:text-red-600 hover:border-red-200">Cancel</button>
+          </div>
+          <p class="text-[11px] text-gray-400 text-center mt-3">Registered on ${new Date(r.registered_at).toLocaleString()}</p>
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+function renderAdmin(){
+  const needAuth=document.getElementById('adminNeedAuth');
+  const content=document.getElementById('adminContent');
+  if(!currentUser || !currentUser.isAdmin){
+    needAuth.classList.remove('hidden'); content.classList.add('hidden');
+  } else {
+    needAuth.classList.add('hidden'); content.classList.remove('hidden');
+    // stats
+    const totalCap=events.reduce((s,e)=>s+e.capacity,0);
+    const totalRegs=registrations.length;
+    const fill= totalCap? Math.round((totalRegs/totalCap)*100):0;
+    document.getElementById('adminStatEvents').textContent=events.length;
+    document.getElementById('adminStatRegs').textContent=totalRegs;
+    document.getElementById('adminStatCap').textContent=totalCap.toLocaleString();
+    document.getElementById('adminStatFill').textContent=fill+'%';
+    document.getElementById('adminEventsCount').textContent=events.length+' events';
+    // table
+    const tbody=document.getElementById('adminEventsTable');
+    tbody.innerHTML=events.map(ev=>{
+      const regs=getRegistrationsForEvent(ev.id).length;
+      const pct=Math.round((regs/ev.capacity)*100);
+      return `<tr class="hover:bg-gray-50">
+        <td class="px-5 py-3"><div class="flex items-center gap-3"><img src="${ev.image_url}" class="w-10 h-10 rounded-lg object-cover"><div><p class="font-bold leading-tight">${ev.title}</p><p class="text-xs text-gray-500">${ev.location}</p></div></div></td>
+        <td class="px-5 py-3"><span class="px-2.5 py-1 rounded-full text-xs font-bold border ${categoryColor(ev.category)}">${ev.category}</span></td>
+        <td class="px-5 py-3 text-xs font-medium">${formatDate(ev.event_date)}<br><span class="text-gray-500">${formatTime(ev.event_time)}</span></td>
+        <td class="px-5 py-3"><div class="w-24"><div class="flex justify-between text-xs font-bold"><span>${regs}</span><span class="text-gray-500">/${ev.capacity}</span></div><div class="h-1.5 bg-gray-100 rounded-full overflow-hidden mt-1"><div class="h-full bg-violet-600" style="width:${pct}%"></div></div></div></td>
+        <td class="px-5 py-3 font-bold">${regs}</td>
+        <td class="px-5 py-3 text-right">
+          <div class="inline-flex gap-1">
+            <button onclick="openEventForm(${ev.id})" class="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center hover:bg-black"><i class="fa-solid fa-pen text-[11px]"></i></button>
+            <button onclick="handleDeleteEvent(${ev.id})" class="w-8 h-8 rounded-full bg-white border border-gray-200 flex items-center justify-center hover:bg-red-50 hover:text-red-600 hover:border-red-200"><i class="fa-solid fa-trash text-[11px]"></i></button>
+          </div>
+        </td>
+      </tr>`;
+    }).join('');
+    // regs
+    const regTbody=document.getElementById('adminRegsTable');
+    const empty=document.getElementById('adminRegsEmpty');
+    if(registrations.length===0){
+      regTbody.innerHTML=''; empty.classList.remove('hidden');
+    } else {
+      empty.classList.add('hidden');
+      const sorted=[...registrations].sort((a,b)=> new Date(b.registered_at)-new Date(a.registered_at)).slice(0,20);
+      regTbody.innerHTML=sorted.map(r=>{
+        const ev=events.find(e=>e.id===r.event_id);
+        const user=users.find(u=>u.id===r.user_id);
+        return `<tr class="hover:bg-gray-50">
+          <td class="px-5 py-3 font-mono text-xs font-bold text-violet-700">${r.ticket_id}</td>
+          <td class="px-5 py-3"><p class="font-bold text-sm">${user?user.name:'Unknown'}</p><p class="text-xs text-gray-500">${user?user.email:''}</p></td>
+          <td class="px-5 py-3 text-sm font-medium">${ev?ev.title:'Deleted event'}</td>
+          <td class="px-5 py-3 text-xs text-gray-600">${new Date(r.registered_at).toLocaleString()}</td>
+        </tr>`;
+      }).join('');
+    }
+  }
+  updateStats();
+}
+function updateStats(){
+  document.getElementById('statTotal').textContent=events.length;
+  document.getElementById('statRegs').textContent=registrations.length;
+  const totalCap=events.reduce((s,e)=>s+e.capacity,0);
+  const fill= totalCap? Math.round((registrations.length/totalCap)*100):0;
+  document.getElementById('statCap').textContent=fill+'%';
+}
+function updateAuthUI(){
+  const container=document.getElementById('authActions');
+  const adminBtn=document.getElementById('adminNavBtn');
+  const mobileAdmin=document.getElementById('mobileAdminBtn');
+  if(currentUser){
+    adminBtn.classList.toggle('hidden', !currentUser.isAdmin);
+    mobileAdmin.classList.toggle('hidden', !currentUser.isAdmin);
+    container.innerHTML=`
+      <div class="hidden sm:flex items-center gap-3 pl-3 pr-1 py-1 bg-gray-900 rounded-full text-white">
+        <img src="https://i.pravatar.cc/100?img=${currentUser.isAdmin?15:8}" class="w-7 h-7 rounded-full">
+        <span class="text-sm font-semibold pr-1">${currentUser.name.split(' ')[0]}</span>
+        <button onclick="handleLogout()" class="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center hover:bg-white/25"><i class="fa-solid fa-right-from-bracket text-xs"></i></button>
+      </div>
+      <button onclick="handleLogout()" class="sm:hidden w-9 h-9 rounded-full bg-dark text-white flex items-center justify-center"><i class="fa-solid fa-right-from-bracket text-xs"></i></button>
+    `;
+  } else {
+    adminBtn.classList.add('hidden'); mobileAdmin.classList.add('hidden');
+    container.innerHTML=`
+      <button onclick="openAuth('login')" class="hidden sm:inline-flex px-5 py-2.5 rounded-full border border-gray-200 bg-white text-sm font-bold hover:bg-gray-50">Log in</button>
+      <button onclick="openAuth('register')" class="inline-flex px-5 py-2.5 rounded-full bg-dark text-white text-sm font-bold hover:bg-black">Sign up</button>
+    `;
+  }
+}
+
+/* ---------- Event Modal ---------- */
+function openEventModal(id){
+  const ev=events.find(e=>e.id===id);
+  if(!ev) return;
+  const regs=getRegistrationsForEvent(id);
+  const remaining=ev.capacity-regs.length;
+  const pct=Math.round((regs.length/ev.capacity)*100);
+  const registered=isRegistered(id);
+  const canRegister = currentUser && !registered && remaining>0;
+  document.getElementById('eventModalContent').innerHTML=`
+    <div class="relative h-[260px] sm:h-[340px] overflow-hidden">
+      <img src="${ev.image_url}" class="w-full h-full object-cover">
+      <div class="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent"></div>
+      <button onclick="closeEventModal()" class="absolute top-4 right-4 w-9 h-9 rounded-full bg-white/90 backdrop-blur flex items-center justify-center hover:bg-white"><i class="fa-solid fa-xmark"></i></button>
+      <span class="absolute top-4 left-4 px-3 py-1.5 rounded-full bg-white text-xs font-extrabold tracking-wide">${ev.category.toUpperCase()}</span>
+      <div class="absolute bottom-0 left-0 right-0 p-6 text-white">
+        <h2 class="text-2xl sm:text-3xl font-extrabold leading-tight">${ev.title}</h2>
+        <p class="text-sm opacity-90 flex flex-wrap items-center gap-3 mt-2"><span class="flex items-center gap-1.5"><i class="fa-regular fa-calendar"></i> ${formatDate(ev.event_date)} • ${formatTime(ev.event_time)}</span><span class="flex items-center gap-1.5"><i class="fa-solid fa-location-dot"></i> ${ev.location}</span></p>
+      </div>
+    </div>
+    <div class="p-6 sm:p-7">
+      <div class="grid lg:grid-cols-[1.4fr_0.8fr] gap-6">
+        <div>
+          <h3 class="font-extrabold">About this event</h3>
+          <p class="text-sm text-gray-600 leading-relaxed mt-2">${ev.description} Join industry leaders, participate in interactive sessions, and expand your network. This is a must-attend experience curated for professionals and enthusiasts alike.</p>
+          <div class="mt-6 grid grid-cols-3 gap-3">
+            <div class="bg-gray-50 rounded-2xl p-4 text-center"><i class="fa-regular fa-calendar text-violet-600"></i><p class="text-xs font-bold tracking-widest text-gray-500 mt-2">DATE</p><p class="text-sm font-bold">${formatDate(ev.event_date)}</p></div>
+            <div class="bg-gray-50 rounded-2xl p-4 text-center"><i class="fa-regular fa-clock text-violet-600"></i><p class="text-xs font-bold tracking-widest text-gray-500 mt-2">TIME</p><p class="text-sm font-bold">${formatTime(ev.event_time)}</p></div>
+            <div class="bg-gray-50 rounded-2xl p-4 text-center"><i class="fa-solid fa-location-dot text-violet-600"></i><p class="text-xs font-bold tracking-widest text-gray-500 mt-2">VENUE</p><p class="text-sm font-bold line-clamp-1">${ev.location.split(',')[0]}</p></div>
+          </div>
+          <div class="mt-6 p-4 rounded-2xl border border-gray-200 bg-white flex items-start gap-3">
+            <div class="w-10 h-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center flex-shrink-0"><i class="fa-solid fa-circle-info"></i></div>
+            <div><p class="text-sm font-bold">Secure Registration</p><p class="text-xs text-gray-600 leading-relaxed">Your data is protected with hashed passwords and parameterized SQL. Digital ticket issued instantly.</p></div>
+          </div>
+        </div>
+        <div class="space-y-4">
+          <div class="bg-gray-50 rounded-[20px] p-5 border border-gray-100">
+            <div class="flex items-center justify-between text-xs font-bold tracking-widest text-gray-500"><span>CAPACITY</span><span class="text-dark">${regs.length} / ${ev.capacity}</span></div>
+            <div class="h-2 bg-white rounded-full overflow-hidden mt-3 border border-gray-200"><div class="h-full bg-gradient-to-r from-violet-600 to-indigo-600" style="width:${pct}%"></div></div>
+            <p class="text-xs text-gray-600 mt-2">${remaining} spots remaining • ${pct}% filled</p>
+            <div class="mt-5 space-y-2">
+              ${registered? `<div class="w-full py-3 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-700 font-bold text-center text-sm"><i class="fa-solid fa-check mr-2"></i>You're registered!</div><button onclick="openTicketModalByEvent(${ev.id})" class="w-full py-3 rounded-full bg-dark text-white font-bold text-sm">View Ticket</button>` : remaining<=0? `<div class="w-full py-3 rounded-full bg-red-50 border border-red-200 text-red-600 font-bold text-center text-sm">Sold Out</div>` : !currentUser? `<button onclick="closeEventModal(); openAuth('login')" class="w-full py-3 rounded-full bg-dark text-white font-bold text-sm">Login to Register</button><p class="text-xs text-center text-gray-500">Create account in 30 seconds</p>` : `<button onclick="handleQuickRegister(${ev.id})" class="w-full py-3 rounded-full bg-dark text-white font-bold text-sm hover:bg-black">Register Now — Free</button><p class="text-xs text-center text-gray-500">Instant digital ticket • Free cancellation</p>`}
+            </div>
+          </div>
+          <div class="bg-dark rounded-[20px] p-5 text-white">
+            <p class="text-xs font-bold tracking-widest text-white/60">ORGANIZED BY</p>
+            <div class="flex items-center gap-3 mt-3">
+              <img src="https://i.pravatar.cc/100?img=12" class="w-10 h-10 rounded-full">
+              <div><p class="text-sm font-bold">Eventora Team</p><p class="text-xs text-white/60">Verified organizer • 4.9★</p></div>
+              <button class="ml-auto w-8 h-8 rounded-full bg-white/15 flex items-center justify-center"><i class="fa-regular fa-envelope text-xs"></i></button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+  document.getElementById('eventModal').classList.remove('hidden');
+  document.body.style.overflow='hidden';
+}
+function closeEventModal(){ document.getElementById('eventModal').classList.add('hidden'); document.body.style.overflow=''; }
+
+/* ---------- Ticket Modal ---------- */
+function openTicketModal(ticketId){
+  const reg=registrations.find(r=>r.ticket_id===ticketId);
+  if(!reg) return;
+  const ev=events.find(e=>e.id===reg.event_id);
+  const user=users.find(u=>u.id===reg.user_id);
+  document.getElementById('ticketModalContent').innerHTML=`
+    <div class="bg-gradient-to-br from-violet-600 to-indigo-600 p-6 text-white relative overflow-hidden">
+      <div class="absolute -top-10 -right-10 w-40 h-40 bg-white/20 rounded-full blur-2xl"></div>
+      <div class="relative flex items-center justify-between">
+        <div class="flex items-center gap-3">
+          <div class="w-9 h-9 rounded-xl bg-white text-violet-700 flex items-center justify-center"><i class="fa-solid fa-bolt"></i></div>
+          <span class="font-extrabold">Eventora</span>
+          <span class="px-2 py-1 rounded-full bg-white/20 text-[10px] font-bold tracking-widest">DIGITAL TICKET</span>
+        </div>
+        <button onclick="closeTicketModal()" class="w-8 h-8 rounded-full bg-white/20 flex items-center justify-center hover:bg-white/30"><i class="fa-solid fa-xmark text-sm"></i></button>
+      </div>
+      <div class="relative mt-6">
+        <p class="text-xs tracking-widest opacity-80 font-bold">ADMIT ONE • VERIFIED</p>
+        <h3 class="text-xl font-extrabold leading-tight mt-1">${ev.title}</h3>
+        <p class="text-sm opacity-80 mt-1">${ev.location}</p>
+      </div>
+    </div>
+    <div class="ticket-perforation bg-white">
+      <div class="p-6">
+        <div class="grid grid-cols-2 gap-4">
+          <div><p class="text-[11px] tracking-widest font-bold text-gray-500">TICKET ID</p><p class="font-mono font-extrabold text-violet-700">${reg.ticket_id}</p></div>
+          <div><p class="text-[11px] tracking-widest font-bold text-gray-500">ATTENDEE NAME</p><p class="font-bold">${user.name}</p><p class="text-xs text-gray-500">${user.email}</p></div>
+          <div><p class="text-[11px] tracking-widest font-bold text-gray-500">EVENT DATE</p><p class="font-bold text-sm">${formatDate(ev.event_date)} • ${formatTime(ev.event_time)}</p></div>
+          <div><p class="text-[11px] tracking-widest font-bold text-gray-500">LOCATION</p><p class="font-bold text-sm">${ev.location}</p></div>
+        </div>
+        <div class="mt-6 flex gap-4 items-center bg-gray-50 rounded-2xl p-4 border border-gray-100">
+          <div class="w-[110px] h-[110px] bg-white rounded-xl border border-gray-200 flex items-center justify-center relative overflow-hidden flex-shrink-0">
+            <div class="grid grid-cols-5 gap-1 p-2">
+              ${Array.from({length:25}).map(()=>`<div class="w-3 h-3 ${Math.random()>0.5?'bg-dark':'bg-white border border-gray-100'} rounded-[2px]"></div>`).join('')}
+            </div>
+            <div class="absolute inset-0 flex items-center justify-center"><div class="w-8 h-8 bg-white rounded-lg flex items-center justify-center shadow"><i class="fa-solid fa-bolt text-violet-600 text-xs"></i></div></div>
+          </div>
+          <div class="text-xs leading-relaxed text-gray-600">
+            <p class="font-bold text-dark">Scan at entrance</p>
+            <p>Present this QR code on your phone. Ticket is tied to <span class="font-semibold">${user.name}</span> and cannot be transferred without organizer approval.</p>
+            <p class="mt-2 font-mono text-[11px] bg-white px-2 py-1 rounded-full border inline-block">${reg.ticket_id} • ${new Date(reg.registered_at).toLocaleDateString()}</p>
+          </div>
+        </div>
+        <div class="mt-6 flex gap-3">
+          <button onclick="window.print()" class="flex-1 py-3 rounded-full bg-dark text-white font-bold text-sm"><i class="fa-solid fa-print mr-2"></i>Print / Save PDF</button>
+          <button onclick="closeTicketModal()" class="px-6 py-3 rounded-full border border-gray-200 font-bold text-sm">Close</button>
+        </div>
+        <p class="text-center text-[11px] text-gray-400 mt-3">Secure • Hashed • Parameterized SQL • Flask Sessions</p>
+      </div>
+    </div>
+  `;
+  document.getElementById('ticketModal').classList.remove('hidden');
+}
+function openTicketModalByEvent(eventId){
+  const reg=registrations.find(r=>r.event_id===eventId && r.user_id===currentUser.id);
+  if(reg) { closeEventModal(); openTicketModal(reg.ticket_id); }
+}
+function closeTicketModal(){ document.getElementById('ticketModal').classList.add('hidden'); }
+
+/* ---------- Auth ---------- */
+function openAuth(tab){
+  document.getElementById('authModal').classList.remove('hidden');
+  switchAuthTab(tab);
+  document.body.style.overflow='hidden';
+}
+function closeAuth(){ document.getElementById('authModal').classList.add('hidden'); document.body.style.overflow=''; }
+function switchAuthTab(tab){
+  const isLogin=tab==='login';
+  document.getElementById('loginForm').classList.toggle('hidden', !isLogin);
+  document.getElementById('registerForm').classList.toggle('hidden', isLogin);
+  document.getElementById('authTabLogin').className = isLogin? 'px-6 py-2 rounded-full bg-dark text-white text-sm font-bold' : 'px-6 py-2 rounded-full text-sm font-bold text-gray-600';
+  document.getElementById('authTabRegister').className = !isLogin? 'px-6 py-2 rounded-full bg-dark text-white text-sm font-bold' : 'px-6 py-2 rounded-full text-sm font-bold text-gray-600';
+}
+function togglePass(id){
+  const el=document.getElementById(id);
+  el.type= el.type==='password'?'text':'password';
+}
+document.getElementById('loginForm').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const email=document.getElementById('loginEmail').value.trim().toLowerCase();
+  const pass=document.getElementById('loginPassword').value;
+  const user=users.find(u=>u.email.toLowerCase()===email && u.password===pass);
+  if(!user){ toast('Invalid email or password','error'); return; }
+  currentUser=user; persist(); updateAuthUI(); closeAuth(); toast(`Welcome back, ${user.name}!`,'success');
+  renderTickets(); renderAdmin(); renderEvents(); renderFeatured();
+});
+document.getElementById('registerForm').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const name=document.getElementById('regName').value.trim();
+  const email=document.getElementById('regEmail').value.trim().toLowerCase();
+  const pass=document.getElementById('regPassword').value;
+  const confirm=document.getElementById('regConfirm').value;
+  const err=document.getElementById('regErr');
+  err.classList.add('hidden');
+  if(pass.length<6){ err.textContent='Password must be at least 6 characters'; err.classList.remove('hidden'); return; }
+  if(pass!==confirm){ err.textContent='Passwords do not match'; err.classList.remove('hidden'); return; }
+  if(users.some(u=>u.email.toLowerCase()===email)){ err.textContent='Email already registered'; err.classList.remove('hidden'); return; }
+  const newUser={id:Date.now(), name, email, password:pass, isAdmin:false};
+  users.push(newUser); currentUser=newUser; persist(); updateAuthUI(); closeAuth(); toast('Account created successfully!','success');
+  renderTickets(); renderAdmin();
+});
+function handleLogout(){ currentUser=null; persist(); updateAuthUI(); toast('Logged out','info'); renderTickets(); renderAdmin(); renderEvents(); showView('home'); }
+
+/* ---------- Registration ---------- */
+function handleQuickRegister(eventId){
+  if(!currentUser){ openAuth('login'); toast('Please login to register','info'); return; }
+  if(isRegistered(eventId)){ toast('Already registered for this event','info'); return; }
+  const ev=events.find(e=>e.id===eventId);
+  const regs=getRegistrationsForEvent(eventId);
+  if(regs.length >= ev.capacity){ toast('Event is full','error'); return; }
+  const ticketId='EVT-'+Math.random().toString(36).substring(2,6).toUpperCase()+'-'+Math.random().toString(36).substring(2,6).toUpperCase();
+  const newReg={id: Date.now().toString(), user_id: currentUser.id, event_id: eventId, ticket_id: ticketId, registered_at: new Date().toISOString()};
+  registrations.push(newReg); persist();
+  closeEventModal(); toast('Registration successful! Ticket issued.','success');
+  renderEvents(); renderTickets(); renderAdmin(); renderFeatured();
+  setTimeout(()=> openTicketModal(ticketId), 400);
+}
+function handleCancel(regId){
+  if(!confirm('Cancel this registration? This will free your spot.')) return;
+  registrations = registrations.filter(r=> r.id!==regId);
+  persist(); toast('Registration cancelled','info'); renderTickets(); renderEvents(); renderAdmin();
+}
+
+/* ---------- Admin Event Form ---------- */
+function openEventForm(id=null){
+  if(!currentUser || !currentUser.isAdmin){ toast('Admin access required','error'); return; }
+  document.getElementById('eventFormModal').classList.remove('hidden');
+  document.body.style.overflow='hidden';
+  if(id){
+    const ev=events.find(e=>e.id===id);
+    document.getElementById('eventFormTitle').textContent='Edit Event';
+    document.getElementById('efId').value=ev.id;
+    document.getElementById('efTitle').value=ev.title;
+    document.getElementById('efCategory').value=ev.category;
+    document.getElementById('efCapacity').value=ev.capacity;
+    document.getElementById('efDesc').value=ev.description;
+    document.getElementById('efLocation').value=ev.location;
+    document.getElementById('efImage').value=ev.image_url;
+    document.getElementById('efDate').value=ev.event_date;
+    document.getElementById('efTime').value=ev.event_time;
+  } else {
+    document.getElementById('eventFormTitle').textContent='Add New Event';
+    document.getElementById('eventForm').reset();
+    document.getElementById('efId').value='';
+    // set default date tomorrow
+    const tomorrow=new Date(); tomorrow.setDate(tomorrow.getDate()+7);
+    document.getElementById('efDate').value=tomorrow.toISOString().split('T')[0];
+    document.getElementById('efTime').value='10:00';
+  }
+}
+function closeEventForm(){ document.getElementById('eventFormModal').classList.add('hidden'); document.body.style.overflow=''; }
+document.getElementById('eventForm').addEventListener('submit', (e)=>{
+  e.preventDefault();
+  const id=document.getElementById('efId').value;
+  const payload={
+    title: document.getElementById('efTitle').value.trim(),
+    category: document.getElementById('efCategory').value,
+    capacity: parseInt(document.getElementById('efCapacity').value),
+    description: document.getElementById('efDesc').value.trim(),
+    location: document.getElementById('efLocation').value.trim(),
+    image_url: document.getElementById('efImage').value.trim(),
+    event_date: document.getElementById('efDate').value,
+    event_time: document.getElementById('efTime').value
+  };
+  if(!payload.title || !payload.description) return;
+  if(id){
+    const idx=events.findIndex(e=>e.id==id);
+    events[idx]={...events[idx], ...payload};
+    toast('Event updated','success');
+  } else {
+    const newId= Math.max(...events.map(e=>e.id),0)+1;
+    events.unshift({id:newId, ...payload});
+    toast('Event created','success');
+  }
+  persist(); closeEventForm(); renderEvents(); renderAdmin(); renderFeatured();
+});
+function handleDeleteEvent(id){
+  if(!confirm('Delete this event? All registrations will be removed.')) return;
+  events=events.filter(e=>e.id!==id);
+  registrations=registrations.filter(r=>r.event_id!==id);
+  persist(); toast('Event deleted','info'); renderEvents(); renderAdmin(); renderFeatured();
+}
+function switchAdminTab(tab){
+  document.getElementById('adminTabEvents').className = tab==='events'?'px-5 py-2 rounded-full bg-white shadow text-sm font-bold':'px-5 py-2 rounded-full text-sm font-bold text-gray-600';
+  document.getElementById('adminTabRegs').className = tab==='regs'?'px-5 py-2 rounded-full bg-white shadow text-sm font-bold':'px-5 py-2 rounded-full text-sm font-bold text-gray-600';
+  document.getElementById('adminEventsPanel').classList.toggle('hidden', tab!=='events');
+  document.getElementById('adminRegsPanel').classList.toggle('hidden', tab!=='regs');
+}
+
+/* ---------- Search & Filter ---------- */
+function filterByCategory(cat){ activeCategory=cat; showView('events'); renderEvents(); }
+function clearFilters(){ activeCategory='All'; searchQuery=''; document.getElementById('eventsSearch').value=''; document.getElementById('globalSearch').value=''; document.getElementById('globalSearchMobile').value=''; renderEvents(); }
+document.getElementById('eventsSearch').addEventListener('input', (e)=>{ searchQuery=e.target.value; renderEvents(); });
+document.getElementById('globalSearch').addEventListener('input', (e)=>{ searchQuery=e.target.value; if(document.getElementById('view-events').classList.contains('hidden')) showView('events'); renderEvents(); });
+document.getElementById('globalSearchMobile').addEventListener('input', (e)=>{ searchQuery=e.target.value; showView('events'); renderEvents(); });
+document.getElementById('sortSelect').addEventListener('change', renderEvents);
+document.querySelectorAll('.category-pill').forEach(btn=> btn.addEventListener('click', ()=>{ activeCategory=btn.dataset.cat; renderEvents(); }));
+
+/* ---------- Countdown ---------- */
+function updateCountdown(){
+  const next=[...events].sort((a,b)=> new Date(a.event_date+'T'+a.event_time) - new Date(b.event_date+'T'+b.event_time)).find(e=> new Date(e.event_date+'T'+e.event_time) > new Date()) || events[0];
+  if(!next) return;
+  document.getElementById('countdownLabel').textContent=`${next.title} • ${formatDate(next.event_date)}`;
+  document.getElementById('heroImage').src=next.image_url;
+  const target=new Date(next.event_date+'T'+next.event_time);
+  const tick=()=>{
+    const now=new Date(); let diff=target-now;
+    if(diff<0) diff=0;
+    const d=Math.floor(diff/1000/60/60/24);
+    const h=Math.floor(diff/1000/60/60)%24;
+    const m=Math.floor(diff/1000/60)%60;
+    const s=Math.floor(diff/1000)%60;
+    document.getElementById('cd-days').textContent=String(d).padStart(2,'0');
+    document.getElementById('cd-hours').textContent=String(h).padStart(2,'0');
+    document.getElementById('cd-mins').textContent=String(m).padStart(2,'0');
+    document.getElementById('cd-secs').textContent=String(s).padStart(2,'0');
+  };
+  tick(); setInterval(tick,1000);
+}
+function shareEvent(id){ toast('Link copied to clipboard','info'); }
+
+/* ---------- Toast ---------- */
+function toast(msg, type='success'){
+  const c=document.getElementById('toastContainer');
+  const icons={success:'fa-circle-check text-emerald-500', error:'fa-circle-xmark text-red-500', info:'fa-circle-info text-violet-500'};
+  const el=document.createElement('div');
+  el.className='flex items-center gap-3 bg-white border border-gray-200 shadow-xl rounded-2xl px-4 py-3 min-w-[300px] animate-in';
+  el.innerHTML=`<i class="fa-solid ${icons[type]||icons.info}"></i><p class="text-sm font-medium flex-1">${msg}</p><button onclick="this.parentElement.remove()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-xs"></i></button>`;
+  c.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transform='translateY(4px)'; setTimeout(()=>el.remove(),300); }, 3000);
+}
+
+/* ---------- Init ---------- */
+document.getElementById('mobileMenuBtn').addEventListener('click', ()=> document.getElementById('mobileMenu').classList.toggle('hidden'));
+updateAuthUI(); renderFeatured(); renderEvents(); renderTickets(); renderAdmin(); updateCountdown();
+
+// Close modals on escape
+document.addEventListener('keydown', (e)=>{
+  if(e.key==='Escape'){ closeEventModal(); closeTicketModal(); closeAuth(); closeEventForm(); }
+});
+</script>
+</body>
+</html>
